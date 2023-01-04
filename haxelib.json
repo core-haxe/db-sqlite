@@ -1,0 +1,20 @@
+{
+    "version": "0.0.0",
+    "contributors": [
+        "haxeui",
+        "ianharrigan"
+    ],
+    "license": "MIT",
+    "tags": [
+    ],
+    "releasenote": "0.0.0",
+    "dependencies": {
+        "db-core": "",
+        "sqlite3": "",
+        "promises": ""
+    },
+    "classPath": "src",
+    "name": "db-sqlite",
+    "description": "",
+    "url": ""
+}

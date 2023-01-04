@@ -1,0 +1,1 @@
+--macro db.macros.DatabaseTypes.register("sqlite", "db.sqlite.SqliteDatabaseType")
