@@ -13,6 +13,8 @@ class SqliteTable implements ITable {
     public var name:String;
     public var exists:Bool;
 
+    private var _relationships:Array<RelationshipDefinition> = null;
+
     public function new(db:IDatabase) {
         this.db = db;
     }
@@ -134,7 +136,7 @@ class SqliteTable implements ITable {
                 return;
             }
             var values = [];
-            var sql = buildSelect(this, query, values);
+            var sql = buildSelect(this, query, null, values, db.definedTableRelationships());
             nativeDB.all(sql, values).then(response -> {
                 var records = [];
                 for (item in response.data) {
@@ -153,7 +155,8 @@ class SqliteTable implements ITable {
                 reject(new DatabaseError('table "${name}" does not exist', 'findOne'));
                 return;
             }
-            nativeDB.get(buildSelect(this, query, 1)).then(response -> {
+            var sql = buildSelect(this, query, 1, null, db.definedTableRelationships());
+            nativeDB.get(sql).then(response -> {
                 resolve(new DatabaseResult(db, this, Record.fromDynamic(response.data)));
             }, (error:SqliteError) -> {
                 reject(SqliteError2DatabaseError(error, "connect"));

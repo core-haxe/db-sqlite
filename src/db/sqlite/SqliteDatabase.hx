@@ -7,6 +7,7 @@ import db.sqlite.Utils.*;
 
 class SqliteDatabase implements IDatabase {
     private var _db:NativeDatabase;
+    private var _relationshipDefs:RelationshipDefinitions = null;
 
     private var _config:Dynamic;
 
@@ -16,6 +17,17 @@ class SqliteDatabase implements IDatabase {
     public function config(details:Dynamic) {
         // TODO: validate
         _config = details;
+    }
+
+    public function defineTableRelationship(field1:String, field2:String) {
+        if (_relationshipDefs == null) {
+            _relationshipDefs = new RelationshipDefinitions();
+        }
+        _relationshipDefs.add(field1, field2);
+    }
+
+    public function definedTableRelationships():RelationshipDefinitions {
+        return _relationshipDefs;
     }
 
     public function connect():Promise<DatabaseResult<Bool>> {
@@ -52,7 +64,6 @@ class SqliteDatabase implements IDatabase {
     public function createTable(name:String, columns:Array<ColumnDefinition>):Promise<DatabaseResult<ITable>> {
         return new Promise((resolve, reject) -> {
             var sql = buildCreateTable(name, columns, SqliteDataTypeMapper.get());
-            trace(sql);
             _db.exec(sql).then(response -> {
                 var table:ITable = new SqliteTable(this);
                 table.name = name;
