@@ -19,6 +19,22 @@ class SqliteDatabase implements IDatabase {
         _config = details;
     }
 
+    private var _schema:DatabaseSchema = null;
+    public function schema():Promise<DatabaseResult<DatabaseSchema>> {
+        return new Promise((resolve, reject) -> {
+            if (_schema == null) {
+                Utils.loadFullDatabaseSchema(_db).then(schema -> {
+                    _schema = schema;
+                    resolve(new DatabaseResult(this, _schema));
+                }, (error:SqliteError) -> {
+                    reject(SqliteError2DatabaseError(error, "schema"));
+                });
+            } else {
+                resolve(new DatabaseResult(this, _schema));
+            }
+        });
+    }
+
     public function defineTableRelationship(field1:String, field2:String) {
         if (_relationshipDefs == null) {
             _relationshipDefs = new RelationshipDefinitions();
@@ -34,6 +50,13 @@ class SqliteDatabase implements IDatabase {
         return new Promise((resolve, reject) -> {
             _db = new NativeDatabase(_config.filename);
             _db.open().then(response -> {
+                /*
+                schema().then(schemaResult -> {
+                    resolve(new DatabaseResult(this, response.data));
+                }, (schemaError:DatabaseError) -> {
+                    reject(schemaError);
+                });
+                */
                 resolve(new DatabaseResult(this, response.data));
             }, (error:SqliteError) -> {
                 reject(SqliteError2DatabaseError(error, "connect"));

@@ -19,6 +19,23 @@ class SqliteTable implements ITable {
         this.db = db;
     }
 
+    private var _tableSchema:TableSchema = null;
+    public function schema():Promise<DatabaseResult<TableSchema>> {
+        return new Promise((resolve, reject) -> {
+            if (_tableSchema != null) {
+                resolve(new DatabaseResult(db, this, _tableSchema));
+                return;
+            }
+
+            this.db.schema().then(result -> {
+                _tableSchema = result.data.findTable(this.name);
+                resolve(new DatabaseResult(db, this, _tableSchema));
+            }, (error:DatabaseError) -> {
+                reject(error);
+            });
+        });
+    }
+
     public function all():Promise<DatabaseResult<Array<Record>>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
@@ -135,9 +152,12 @@ class SqliteTable implements ITable {
                 reject(new DatabaseError('table "${name}" does not exist', 'find'));
                 return;
             }
-            var values = [];
-            var sql = buildSelect(this, query, null, values, db.definedTableRelationships());
-            nativeDB.all(sql, values).then(response -> {
+
+            refreshSchema().then(schemaResult -> {
+                var values = [];
+                var sql = buildSelect(this, query, null, values, db.definedTableRelationships(), null, schemaResult.data);
+                return nativeDB.all(sql, values);
+            }).then(response -> {
                 var records = [];
                 for (item in response.data) {
                     records.push(Record.fromDynamic(item));
@@ -167,5 +187,20 @@ class SqliteTable implements ITable {
     private var nativeDB(get, null):NativeDatabase;
     private function get_nativeDB():NativeDatabase {
         return @:privateAccess cast(db, SqliteDatabase)._db;
+    }
+
+    private function refreshSchema():Promise<DatabaseResult<DatabaseSchema>> { // we'll only refresh the data schema if there are table relationships, since the queries might need them
+        return new Promise((resolve, reject) -> {
+            if (db.definedTableRelationships() == null) {
+                resolve(new DatabaseResult(db, this, null));
+                return;
+            }
+
+            db.schema().then(result -> {
+                resolve(result);
+            }, (error) -> {
+                reject(error);
+            });
+        });
     }
 }
