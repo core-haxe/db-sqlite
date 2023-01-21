@@ -42,14 +42,19 @@ class SqliteTable implements ITable {
                 reject(new DatabaseError('table "${name}" does not exist', 'all'));
                 return;
             }
-            nativeDB.all(buildSelect(this)).then(response -> {
+
+            refreshSchema().then(schemaResult -> {
+                var values = [];
+                var sql = buildSelect(this, null, null, values, db.definedTableRelationships(), null, schemaResult.data);
+                return nativeDB.all(sql, values);
+            }).then(response -> {
                 var records = [];
                 for (item in response.data) {
                     records.push(Record.fromDynamic(item));
                 }
                 resolve(new DatabaseResult(db, this, records));
             }, (error:SqliteError) -> {
-                reject(SqliteError2DatabaseError(error, "connect"));
+                reject(SqliteError2DatabaseError(error, "all"));
             });
         });
     }
@@ -175,11 +180,15 @@ class SqliteTable implements ITable {
                 reject(new DatabaseError('table "${name}" does not exist', 'findOne'));
                 return;
             }
-            var sql = buildSelect(this, query, 1, null, db.definedTableRelationships());
-            nativeDB.get(sql).then(response -> {
-                resolve(new DatabaseResult(db, this, Record.fromDynamic(response.data)));
+
+            refreshSchema().then(schemaResult -> {
+                var values = [];
+                var sql = buildSelect(this, query, 1, values, db.definedTableRelationships(), null, schemaResult.data);
+                return nativeDB.all(sql, values);
+            }).then(response -> {
+                resolve(new DatabaseResult(db, this, Record.fromDynamic(response.data[0])));
             }, (error:SqliteError) -> {
-                reject(SqliteError2DatabaseError(error, "connect"));
+                reject(SqliteError2DatabaseError(error, "findOne"));
             });
         });
     }
