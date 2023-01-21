@@ -1,5 +1,7 @@
 package db.sqlite;
 
+import sys.io.File;
+import sys.FileSystem;
 import promises.Promise;
 import sqlite.SqliteError;
 import sqlite.Database as NativeDatabase;
@@ -48,6 +50,9 @@ class SqliteDatabase implements IDatabase {
 
     public function connect():Promise<DatabaseResult<Bool>> {
         return new Promise((resolve, reject) -> {
+            if (!FileSystem.exists(_config.filename)) {
+                File.saveContent(_config.filename, "");
+            }
             _db = new NativeDatabase(_config.filename);
             _db.open().then(response -> {
                 /*
