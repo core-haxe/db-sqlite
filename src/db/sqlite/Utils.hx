@@ -22,6 +22,9 @@ class Utils {
     public static function loadFullDatabaseSchema(db:NativeDatabase):Promise<DatabaseSchema> {
         return new Promise((resolve, reject) -> {
             var schema:DatabaseSchema = {};
+            
+            #if !sys
+
             db.all(SQL_LIST_TABLES_AND_FIELDS).then(results -> {
                 for (r in results.data) {
                     var table = schema.findTable(r.table_name);
@@ -40,6 +43,46 @@ class Utils {
             }, (error:SqliteError) -> {
                 reject(error);
             });
+
+            #else // good old sys db cant use "SQL_LIST_TABLES_AND_FIELDS" because "reasons" so we'll manually parse the reasults of "SELECT * FROM sqlite_master"
+
+            db.all("SELECT * FROM sqlite_master WHERE type = 'table';").then(results -> {
+                for (r in results.data) {
+                    var table = schema.findTable(r.tbl_name);
+                    if (table == null) {
+                        table = {
+                            name: r.tbl_name
+                        };
+                        schema.tables.push(table);
+                    }
+                    
+                    var sql:String = r.sql;
+                    var n1 = sql.indexOf("(");
+                    var n2 = sql.lastIndexOf(")");
+                    if (n1 != -1 && n2 != -1) {
+                        var fieldListString = sql.substring(n1 + 1, n2);
+                        var fieldList = fieldListString.split(",");
+                        for (f in fieldList) {
+                            f = StringTools.trim(f);
+                            var parts = f.split(" ");
+                            var fieldName = StringTools.trim(parts[0]);
+                            if (fieldName.length == 0) {
+                                continue;
+                            }
+                            table.columns.push({
+                                name: parts[0],
+                                type: null
+                            });
+                        }
+                    }
+                }
+                
+                resolve(schema);
+            }, (error:SqliteError) -> {
+                reject(error);
+            });
+
+            #end
         });
     }
 
