@@ -75,9 +75,15 @@ class SqliteTable implements ITable {
                 reject(new DatabaseError('table "${name}" does not exist', 'add'));
                 return;
             }
+            
             var values = [];
+            var insertedId:Int = -1;
             var sql = buildInsert(this, record, values);
-            nativeDB.get(sql, values).then(response -> {
+            nativeDB.get(sql, values).then(result -> {
+                return nativeDB.get(Utils.SQL_LAST_INSERTED_ID, this.name);
+            }).then(result -> {
+                insertedId = result.data.seq;
+                record.field("_insertedId", insertedId);
                 resolve(new DatabaseResult(db, this, record));
             }, (error:SqliteError) -> {
                 reject(SqliteError2DatabaseError(error, "add"));

@@ -13,6 +13,7 @@ class Utils {
                                                            SELECT at.name table_name, pti.*
                                                            FROM all_tables at INNER JOIN pragma_table_info(at.name) pti
                                                            ORDER BY table_name;";
+    public static inline var SQL_LAST_INSERTED_ID = "SELECT seq FROM sqlite_sequence WHERE name=?;";
 
     public static function SqliteError2DatabaseError(error:SqliteError, call:String):DatabaseError {
         var dbError = new DatabaseError(error.message, call);
