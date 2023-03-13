@@ -79,12 +79,29 @@ class SqliteTable implements ITable {
             var values = [];
             var insertedId:Int = -1;
             var sql = buildInsert(this, record, values);
-            nativeDB.get(sql, values).then(result -> {
-                return nativeDB.get(Utils.SQL_LAST_INSERTED_ID, this.name);
+            var hasSequenceTable = false;
+            var schema:DatabaseSchema = null;
+            refreshSchema().then(result -> {
+                schema = result.data;
+                return nativeDB.get(sql, values);
             }).then(result -> {
-                insertedId = result.data.seq;
-                record.field("_insertedId", insertedId);
-                resolve(new DatabaseResult(db, this, record));
+                return nativeDB.get(SQL_TABLE_EXISTS, "sqlite_sequence");
+            }).then(result -> {
+                if (result.data != null) {
+                    hasSequenceTable = true;
+                }
+                if (hasSequenceTable) {
+                    return nativeDB.get(Utils.SQL_LAST_INSERTED_ID, this.name);
+                }
+                return null;
+            }).then(result -> {
+                if (result != null) {
+                    insertedId = result.data.seq;
+                    record.field("_insertedId", insertedId);
+                    resolve(new DatabaseResult(db, this, record));
+                } else {
+                    resolve(new DatabaseResult(db, this, record));
+                }
             }, (error:SqliteError) -> {
                 reject(SqliteError2DatabaseError(error, "add"));
             });
