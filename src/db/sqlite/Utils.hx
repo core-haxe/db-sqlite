@@ -93,7 +93,7 @@ class Utils {
         var columnParts = [];
         for (column in columns) {
             var type = typeMapper.haxeTypeToDatabaseType(column.type);
-            var columnSql = '    ${column.name}';
+            var columnSql = '    `${column.name}`';
             columnSql += ' ${type}';
             if (column.options != null) {
                 if (column.options.contains(PrimaryKey)) {
