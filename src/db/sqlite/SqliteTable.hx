@@ -1,12 +1,12 @@
 package db.sqlite;
 
-import promises.Promise;
-import sqlite.SqliteError;
-import sqlite.Database as NativeDatabase;
+import db.Query.QueryExpr;
 import db.sqlite.Utils.*;
 import db.utils.SqlUtils.*;
-import db.Query.QueryExpr;
+import promises.Promise;
 import promises.PromiseUtils;
+import sqlite.Database as NativeDatabase;
+import sqlite.SqliteError;
 
 class SqliteTable implements ITable {
     public var db:IDatabase;
@@ -83,20 +83,10 @@ class SqliteTable implements ITable {
             var schema:DatabaseSchema = null;
             refreshSchema().then(result -> {
                 schema = result.data;
-                return nativeDB.get(sql, values);
-            }).then(result -> {
-                return nativeDB.get(SQL_TABLE_EXISTS, "sqlite_sequence");
-            }).then(result -> {
-                if (result.data != null) {
-                    hasSequenceTable = true;
-                }
-                if (hasSequenceTable) {
-                    return nativeDB.get(Utils.SQL_LAST_INSERTED_ID, this.name);
-                }
-                return null;
+                return nativeDB.run(sql, values);
             }).then(result -> {
                 if (result != null) {
-                    insertedId = result.data.seq;
+                    insertedId = result.data.lastID;
                     record.field("_insertedId", insertedId);
                     resolve(new DatabaseResult(db, this, record));
                 } else {
