@@ -45,7 +45,7 @@ class SqliteTable implements ITable {
 
             refreshSchema().then(schemaResult -> {
                 var values = [];
-                var sql = buildSelect(this, null, null, values, db.definedTableRelationships(), null, schemaResult.data);
+                var sql = buildSelect(this, null, null, values, db.definedTableRelationships(), schemaResult.data);
                 return nativeDB.all(sql, values);
             }).then(response -> {
                 var records = [];
@@ -164,7 +164,7 @@ class SqliteTable implements ITable {
         });
     }
 
-    public function find(query:QueryExpr):Promise<DatabaseResult<Array<Record>>> {
+    public function find(query:QueryExpr, allowRelationships:Bool = true):Promise<DatabaseResult<Array<Record>>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
                 reject(new DatabaseError('table "${name}" does not exist', 'find'));
@@ -173,7 +173,11 @@ class SqliteTable implements ITable {
 
             refreshSchema().then(schemaResult -> {
                 var values = [];
-                var sql = buildSelect(this, query, null, values, db.definedTableRelationships(), null, schemaResult.data);
+                var relationshipDefinintions = db.definedTableRelationships();
+                if (!allowRelationships) {
+                    relationshipDefinintions = null;
+                }
+                var sql = buildSelect(this, query, null, values, relationshipDefinintions, schemaResult.data);
                 return nativeDB.all(sql, values);
             }).then(response -> {
                 var records = [];
@@ -187,7 +191,7 @@ class SqliteTable implements ITable {
         });
     }
 
-    public function findOne(query:QueryExpr):Promise<DatabaseResult<Record>> {
+    public function findOne(query:QueryExpr, allowRelationships:Bool = true):Promise<DatabaseResult<Record>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
                 reject(new DatabaseError('table "${name}" does not exist', 'findOne'));
@@ -196,7 +200,11 @@ class SqliteTable implements ITable {
 
             refreshSchema().then(schemaResult -> {
                 var values = [];
-                var sql = buildSelect(this, query, 1, values, db.definedTableRelationships(), null, schemaResult.data);
+                var relationshipDefinintions = db.definedTableRelationships();
+                if (!allowRelationships) {
+                    relationshipDefinintions = null;
+                }
+                var sql = buildSelect(this, query, 1, values, relationshipDefinintions, schemaResult.data);
                 return nativeDB.all(sql, values);
             }).then(response -> {
                 resolve(new DatabaseResult(db, this, Record.fromDynamic(response.data[0])));
