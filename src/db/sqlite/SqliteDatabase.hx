@@ -1,11 +1,11 @@
 package db.sqlite;
 
-import sys.io.File;
-import sys.FileSystem;
-import promises.Promise;
-import sqlite.SqliteError;
-import sqlite.Database as NativeDatabase;
 import db.sqlite.Utils.*;
+import promises.Promise;
+import sqlite.Database as NativeDatabase;
+import sqlite.SqliteError;
+import sys.FileSystem;
+import sys.io.File;
 
 class SqliteDatabase implements IDatabase {
     private var _db:NativeDatabase;
@@ -19,6 +19,15 @@ class SqliteDatabase implements IDatabase {
     public function config(details:Dynamic) {
         // TODO: validate
         _config = details;
+    }
+
+    // TODO: combine with config?
+    private var _properties:Map<String, Any> = [];
+    public function setProperty(name:String, value:Any) {
+        _properties.set(name, value);
+    }
+    public function getProperty(name:String):Any {
+        return _properties.get(name);
     }
 
     private var _schema:DatabaseSchema = null;
@@ -96,6 +105,7 @@ class SqliteDatabase implements IDatabase {
                 var table:ITable = new SqliteTable(this);
                 table.name = name;
                 table.exists = true;
+                _schema = null;
                 resolve(new DatabaseResult(this, table));
             }, (error:SqliteError) -> {
                 reject(SqliteError2DatabaseError(error, "createTable"));
@@ -105,6 +115,7 @@ class SqliteDatabase implements IDatabase {
 
     public function deleteTable(name:String):Promise<DatabaseResult<Bool>> {
         return new Promise((resolve, reject) -> {
+            _schema = null;
             reject(new DatabaseError("not implemented", "deleteTable"));
         });
     }
