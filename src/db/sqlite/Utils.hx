@@ -1,9 +1,8 @@
 package db.sqlite;
 
 import promises.Promise;
-import sqlite.SqliteError;
-
 import sqlite.Database as NativeDatabase;
+import sqlite.SqliteError;
 
 class Utils {
     public static inline var SQL_TABLE_EXISTS = "SELECT name FROM sqlite_master WHERE type='table' AND name=?;";
@@ -91,13 +90,20 @@ class Utils {
         var sql = 'CREATE TABLE ${tableName} (\n';
 
         var columnParts = [];
+        var unique:Array<String> = null;
         for (column in columns) {
             var type = typeMapper.haxeTypeToDatabaseType(column.type);
             var columnSql = '    `${column.name}`';
             columnSql += ' ${type}';
             if (column.options != null) {
                 if (column.options.contains(PrimaryKey)) {
-                    columnSql += ' PRIMARY KEY';
+                    if (unique == null) {
+                        columnSql += ' PRIMARY KEY';
+                        unique = [];
+                        unique.push(column.name);
+                    } else {
+                        unique.push(column.name);
+                    }
                 }
                 if (column.options.contains(AutoIncrement)) {
                     columnSql += ' AUTOINCREMENT';
@@ -112,6 +118,11 @@ class Utils {
 
         sql += columnParts.join(",\n");
 
+        if (unique != null && unique.length > 1) {
+            sql += ",\n    UNIQUE (";
+            sql += unique.join(", ");
+            sql += ")\n";
+        }
         sql += ');';
         return sql;
     }
