@@ -85,7 +85,7 @@ class SqliteTable implements ITable {
                 schema = result.data;
                 return nativeDB.run(sql, values);
             }).then(result -> {
-                if (result != null) {
+                if (result != null && result.data != null) {
                     insertedId = result.data.lastID;
                     record.field("_insertedId", insertedId);
                     resolve(new DatabaseResult(db, this, record));
