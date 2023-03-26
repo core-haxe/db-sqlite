@@ -4,6 +4,8 @@ import promises.Promise;
 import sqlite.Database as NativeDatabase;
 import sqlite.SqliteError;
 
+using StringTools;
+
 class Utils {
     public static inline var SQL_TABLE_EXISTS = "SELECT name FROM sqlite_master WHERE type='table' AND name=?;";
     public static inline var SQL_LIST_TABLES = "SELECT name FROM sqlite_master WHERE type='table';";
@@ -69,8 +71,10 @@ class Utils {
                             if (fieldName.length == 0) {
                                 continue;
                             }
+                            var fieldName = parts[0];
+                            fieldName = fieldName.replace("`", "");
                             table.columns.push({
-                                name: parts[0],
+                                name: fieldName,
                                 type: null
                             });
                         }
