@@ -1,6 +1,6 @@
 package db.sqlite;
 
-import db.Query.QueryExpr;
+import Query.QueryExpr;
 import db.sqlite.Utils.*;
 import db.utils.SqlUtils.*;
 import promises.Promise;
