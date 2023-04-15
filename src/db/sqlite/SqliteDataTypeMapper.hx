@@ -21,6 +21,7 @@ class SqliteDataTypeMapper implements IDataTypeMapper {
             case Boolean:       'INTEGER';
             case Text(n):       'VARCHAR($n)';
             case Memo:          'TEXT';
+            case Binary:        'BLOB';
         }
     }
 }
