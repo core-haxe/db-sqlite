@@ -24,9 +24,18 @@ class SqliteDatabase implements IDatabase {
     // TODO: combine with config?
     private var _properties:Map<String, Any> = [];
     public function setProperty(name:String, value:Any) {
+        if (name == "complexRelationships") {
+            if (_relationshipDefs == null) {
+                _relationshipDefs = new RelationshipDefinitions();
+                _relationshipDefs.complexRelationships = value;
+            }
+        }
         _properties.set(name, value);
     }
-    public function getProperty(name:String):Any {
+    public function getProperty(name:String, defaultValue:Any):Any {
+        if (_properties == null || !_properties.exists(name)) {
+            return defaultValue;
+        }
         return _properties.get(name);
     }
 

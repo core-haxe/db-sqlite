@@ -221,7 +221,7 @@ class SqliteTable implements ITable {
 
     private function refreshSchema():Promise<DatabaseResult<DatabaseSchema>> { // we'll only refresh the data schema if there are table relationships, since the queries might need them
         return new Promise((resolve, reject) -> {
-            var alwaysAliasResultFields:Bool = this.db.getProperty("alwaysAliasResultFields");
+            var alwaysAliasResultFields:Bool = this.db.getProperty("alwaysAliasResultFields", false);
             if (alwaysAliasResultFields == false && db.definedTableRelationships() == null) {
                 resolve(new DatabaseResult(db, this, null));
                 return;
