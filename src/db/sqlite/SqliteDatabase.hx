@@ -4,6 +4,7 @@ import db.sqlite.Utils.*;
 import promises.Promise;
 import sqlite.Database as NativeDatabase;
 import sqlite.SqliteError;
+import sqlite.SqliteOpenMode;
 import sys.FileSystem;
 import sys.io.File;
 
@@ -74,7 +75,15 @@ class SqliteDatabase implements IDatabase {
             if (!FileSystem.exists(_config.filename)) {
                 File.saveContent(_config.filename, "");
             }
-            _db = new NativeDatabase(_config.filename);
+            var openMode:SqliteOpenMode = SqliteOpenMode.ReadWrite;
+            if (_config.openMode != null) {
+                if (_config.openMode == "ReadWrite") {
+                    openMode = SqliteOpenMode.ReadWrite;
+                } else if (_config.openMode == "ReadOnly") {
+                    openMode = SqliteOpenMode.ReadOnly;
+                }
+            }
+            _db = new NativeDatabase(_config.filename, openMode);
             _db.open().then(response -> {
                 /*
                 schema().then(schemaResult -> {
