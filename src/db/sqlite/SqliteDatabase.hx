@@ -19,6 +19,9 @@ class SqliteDatabase implements IDatabase {
     public function config(details:Dynamic) {
         // TODO: validate
         _config = details;
+        if (_config != null && _config.journalMode != null) {
+            setProperty("journalMode", _config.journalMode);
+        }
     }
 
     // TODO: combine with config?
@@ -80,7 +83,13 @@ class SqliteDatabase implements IDatabase {
                     reject(schemaError);
                 });
                 */
-                resolve(new DatabaseResult(this, response.data));
+                if (_properties.exists("journalMode")) {
+                    _db.run("PRAGMA journal_mode=" + _properties.get("journalMode") + ";").then(_ -> {
+                        resolve(new DatabaseResult(this, response.data));
+                    });
+                } else {
+                    resolve(new DatabaseResult(this, response.data));
+                }
             }, (error:SqliteError) -> {
                 reject(SqliteError2DatabaseError(error, "connect"));
             });
