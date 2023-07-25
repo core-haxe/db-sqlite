@@ -8,6 +8,8 @@ import promises.PromiseUtils;
 import sqlite.Database as NativeDatabase;
 import sqlite.SqliteError;
 
+using StringTools;
+
 class SqliteTable implements ITable {
     public var db:IDatabase;
     public var name:String;
@@ -69,6 +71,7 @@ class SqliteTable implements ITable {
         });
     }
 
+    private var retryCount = 0;
     public function add(record:Record):Promise<DatabaseResult<Record>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
@@ -93,7 +96,22 @@ class SqliteTable implements ITable {
                     resolve(new DatabaseResult(db, this, record));
                 }
             }, (error:SqliteError) -> {
-                reject(SqliteError2DatabaseError(error, "add"));
+                if (error.message.contains("SQLITE_BUSY")) { // bit of a sneaky way to avoid busy errors, if you them consitently, you are using sqlite for the wrong thing! 
+                    retryCount++;
+                    if (retryCount < 5) {
+                        haxe.Timer.delay(() -> {
+                            add(record).then(result -> {
+                                resolve(result);
+                            }, error -> {
+                                reject(error);
+                            });
+                        }, 20);
+                    } else {
+                        reject(SqliteError2DatabaseError(error, "add"));
+                    }
+                } else {
+                    reject(SqliteError2DatabaseError(error, "add"));
+                }
             });
         });
     }
