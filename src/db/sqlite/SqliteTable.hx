@@ -47,7 +47,7 @@ class SqliteTable implements ITable {
 
             refreshSchema().then(schemaResult -> {
                 var values = [];
-                var sql = buildSelect(this, null, null, values, db.definedTableRelationships(), schemaResult.data);
+                var sql = buildSelect(this, null, null, null, values, db.definedTableRelationships(), schemaResult.data);
                 return nativeDB.all(sql, values);
             }).then(response -> {
                 var records = [];
@@ -61,13 +61,31 @@ class SqliteTable implements ITable {
         });
     }
 
-    public function page(pageIndex:Int, pageSize:Int = 100, query:QueryExpr = null):Promise<DatabaseResult<Array<Record>>> {
+    public function page(pageIndex:Int, pageSize:Int = 100, query:QueryExpr = null, allowRelationships:Bool = true):Promise<DatabaseResult<Array<Record>>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
-                reject(new DatabaseError('table "${name}" does not exist', 'page'));
+                reject(new DatabaseError('table "${name}" does not exist', 'all'));
                 return;
             }
-            reject(new DatabaseError("not implemented", "page"));
+
+            refreshSchema().then(schemaResult -> {
+                var relationshipDefinintions = db.definedTableRelationships();
+                if (!allowRelationships) {
+                    relationshipDefinintions = null;
+                }
+
+                var values = [];
+                var sql = buildSelect(this, null, pageSize, pageIndex * pageSize, values, relationshipDefinintions, schemaResult.data);
+                return nativeDB.all(sql, values);
+            }).then(response -> {
+                var records = [];
+                for (item in response.data) {
+                    records.push(Record.fromDynamic(item));
+                }
+                resolve(new DatabaseResult(db, this, records));
+            }, (error:SqliteError) -> {
+                reject(SqliteError2DatabaseError(error, "all"));
+            });
         });
     }
 
@@ -195,7 +213,7 @@ class SqliteTable implements ITable {
                 if (!allowRelationships) {
                     relationshipDefinintions = null;
                 }
-                var sql = buildSelect(this, query, null, values, relationshipDefinintions, schemaResult.data);
+                var sql = buildSelect(this, query, null, null, values, relationshipDefinintions, schemaResult.data);
                 return nativeDB.all(sql, values);
             }).then(response -> {
                 var records = [];
@@ -222,7 +240,7 @@ class SqliteTable implements ITable {
                 if (!allowRelationships) {
                     relationshipDefinintions = null;
                 }
-                var sql = buildSelect(this, query, 1, values, relationshipDefinintions, schemaResult.data);
+                var sql = buildSelect(this, query, 1, null, values, relationshipDefinintions, schemaResult.data);
                 return nativeDB.all(sql, values);
             }).then(response -> {
                 resolve(new DatabaseResult(db, this, Record.fromDynamic(response.data[0])));
