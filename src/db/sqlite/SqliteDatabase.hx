@@ -59,6 +59,10 @@ class SqliteDatabase implements IDatabase {
         });
     }
 
+    public function clearCachedSchema() {
+        _schema = null;
+    }
+
     public function defineTableRelationship(field1:String, field2:String) {
         if (_relationshipDefs == null) {
             _relationshipDefs = new RelationshipDefinitions();
