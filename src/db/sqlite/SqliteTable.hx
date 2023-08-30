@@ -268,6 +268,23 @@ class SqliteTable implements ITable {
     }
 
 
+    public function removeColumn(column:ColumnDefinition):Promise<DatabaseResult<Bool>> {
+        return new Promise((resolve, reject) -> {
+            if (!exists) {
+                reject(new DatabaseError('table "${name}" does not exist', 'addColumn'));
+                return;
+            }
+
+            var sql = buildRemoveColumns(this.name, [column], SqliteDataTypeMapper.get());
+            nativeDB.exec(sql).then(result -> {
+                cast(db, SqliteDatabase).clearCachedSchema();
+                resolve(new DatabaseResult(db, this, true));
+            }, (error:SqliteError) -> {
+                reject(SqliteError2DatabaseError(error, "addColumn"));
+            });
+        });
+    }
+
     private var nativeDB(get, null):NativeDatabase;
     private function get_nativeDB():NativeDatabase {
         return @:privateAccess cast(db, SqliteDatabase)._db;
