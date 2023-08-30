@@ -38,6 +38,37 @@ class SqliteTable implements ITable {
         });
     }
 
+    public function clearCachedSchema() {
+        _tableSchema = null;
+    }
+
+    public function applySchema(newSchema:TableSchema):Promise<DatabaseResult<TableSchema>> {
+        return new Promise((resolve, reject) -> {
+            
+            schema().then(result -> {
+                var currentSchema = result.data;
+                var promises = [];
+                if (!currentSchema.equals(newSchema)) {
+                    var diff = currentSchema.diff(newSchema);
+
+                    for (added in diff.addedColumns) {
+                        promises.push(addColumn.bind(added));
+                    }
+
+                    for (removed in diff.removedColumns) {
+                        promises.push(removeColumn.bind(removed));
+                    }
+                }
+                return PromiseUtils.runSequentially(promises);
+            }).then(result -> {
+                resolve(new DatabaseResult(db, this, newSchema));
+            }, (error:DatabaseError) -> {
+                reject(error);
+            });
+        });
+    }
+
+
     public function all():Promise<DatabaseResult<Array<Record>>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
@@ -259,6 +290,7 @@ class SqliteTable implements ITable {
 
             var sql = buildAddColumns(this.name, [column], SqliteDataTypeMapper.get());
             nativeDB.exec(sql).then(result -> {
+                clearCachedSchema();
                 cast(db, SqliteDatabase).clearCachedSchema();
                 resolve(new DatabaseResult(db, this, true));
             }, (error:SqliteError) -> {
@@ -266,7 +298,6 @@ class SqliteTable implements ITable {
             });
         });
     }
-
 
     public function removeColumn(column:ColumnDefinition):Promise<DatabaseResult<Bool>> {
         return new Promise((resolve, reject) -> {
@@ -277,6 +308,7 @@ class SqliteTable implements ITable {
 
             var sql = buildRemoveColumns(this.name, [column], SqliteDataTypeMapper.get());
             nativeDB.exec(sql).then(result -> {
+                clearCachedSchema();
                 cast(db, SqliteDatabase).clearCachedSchema();
                 resolve(new DatabaseResult(db, this, true));
             }, (error:SqliteError) -> {
