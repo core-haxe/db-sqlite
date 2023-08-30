@@ -253,7 +253,7 @@ class SqliteTable implements ITable {
     public function addColumn(column:ColumnDefinition):Promise<DatabaseResult<Bool>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
-                reject(new DatabaseError('table "${name}" does not exist', 'findOne'));
+                reject(new DatabaseError('table "${name}" does not exist', 'addColumn'));
                 return;
             }
 
