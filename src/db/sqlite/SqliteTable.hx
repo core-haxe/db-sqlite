@@ -281,6 +281,33 @@ class SqliteTable implements ITable {
         });
     }
 
+    public function findUnique(columnName:String, query:QueryExpr = null, allowRelationships:Bool = true):Promise<DatabaseResult<Array<Record>>> {
+        return new Promise((resolve, reject) -> {
+            if (!exists) {
+                reject(new DatabaseError('table "${name}" does not exist', 'find'));
+                return;
+            }
+
+            refreshSchema().then(schemaResult -> {
+                var values = [];
+                var relationshipDefinintions = db.definedTableRelationships();
+                if (!allowRelationships) {
+                    relationshipDefinintions = null;
+                }
+                var sql = buildDistinctSelect(this, query, columnName, null, null, values, relationshipDefinintions, schemaResult.data);
+                return nativeDB.all(sql, values);
+            }).then(response -> {
+                var records = [];
+                for (item in response.data) {
+                    records.push(Record.fromDynamic(item));
+                }
+                resolve(new DatabaseResult(db, this, records));
+            }, (error:SqliteError) -> {
+                reject(SqliteError2DatabaseError(error, "findUnique"));
+            });
+        });
+    }
+
     public function addColumn(column:ColumnDefinition):Promise<DatabaseResult<Bool>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
