@@ -46,9 +46,9 @@ class SqliteTable implements ITable {
         return new Promise((resolve, reject) -> {
             
             schema().then(result -> {
-                var currentSchema = result.data;
                 var promises = [];
-                if (!currentSchema.equals(newSchema)) {
+                var currentSchema = result.data;
+                if (currentSchema != null && !currentSchema.equals(newSchema)) {
                     var diff = currentSchema.diff(newSchema);
 
                     for (added in diff.addedColumns) {
@@ -61,6 +61,8 @@ class SqliteTable implements ITable {
                 }
                 return PromiseUtils.runSequentially(promises);
             }).then(result -> {
+                clearCachedSchema();
+                cast(db, SqliteDatabase).clearCachedSchema();
                 resolve(new DatabaseResult(db, this, newSchema));
             }, (error:DatabaseError) -> {
                 reject(error);
