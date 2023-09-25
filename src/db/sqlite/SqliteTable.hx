@@ -210,6 +210,8 @@ class SqliteTable implements ITable {
                 return;
             }
             nativeDB.exec(buildDeleteWhere(this, query)).then(response -> {
+                return nativeDB.exec("VACUUM;");
+            }).then(response -> {
                 resolve(new DatabaseResult(db, this, true));
             }, (error:SqliteError) -> {
                 reject(SqliteError2DatabaseError(error, "deleteAll"));
