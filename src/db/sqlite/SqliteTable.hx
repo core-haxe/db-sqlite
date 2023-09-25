@@ -310,6 +310,25 @@ class SqliteTable implements ITable {
         });
     }
 
+    public function count(query:QueryExpr = null):Promise<DatabaseResult<Int>> {
+        return new Promise((resolve, reject) -> {
+            if (!exists) {
+                reject(new DatabaseError('table "${name}" does not exist', 'find'));
+                return;
+            }
+            
+            refreshSchema().then(schemaResult -> {
+                var sql = 'SELECT COUNT(*) from ${this.name}';
+                return nativeDB.get(sql);
+            }).then(response -> {
+                var record = Record.fromDynamic(response.data);
+                resolve(new DatabaseResult(db, this, cast record.values()[0]));
+            }, (error:SqliteError) -> {
+                reject(SqliteError2DatabaseError(error, "findUnique"));
+            });
+        });
+    }
+
     public function addColumn(column:ColumnDefinition):Promise<DatabaseResult<Bool>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
