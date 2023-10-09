@@ -128,7 +128,9 @@ class SqliteDatabase implements IDatabase {
                     table.exists = !(response.data == null);
 
                     #if !sqlite_no_table_cache
-                    tableCache.set(name, table);
+                    if (table.exists) {
+                        tableCache.set(name, table);
+                    }
                     #end
 
                     resolve(new DatabaseResult(this, table));
@@ -146,6 +148,13 @@ class SqliteDatabase implements IDatabase {
                 var table:ITable = new SqliteTable(this);
                 table.name = name;
                 table.exists = true;
+
+                #if !sqlite_no_table_cache
+                if (table.exists) {
+                    tableCache.set(name, table);
+                }
+                #end
+
                 _schema = null;
                 resolve(new DatabaseResult(this, table));
             }, (error:SqliteError) -> {
