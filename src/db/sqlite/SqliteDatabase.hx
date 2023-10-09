@@ -116,16 +116,26 @@ class SqliteDatabase implements IDatabase {
         });
     }
 
+    private var tableCache:Map<String, ITable> = [];
     public function table(name:String):Promise<DatabaseResult<ITable>> {
         return new Promise((resolve, reject) -> {
-            _db.get(SQL_TABLE_EXISTS, name).then(response -> {
-                var table:ITable = new SqliteTable(this);
-                table.name = name;
-                table.exists = !(response.data == null);
-                resolve(new DatabaseResult(this, table));
-            }, (error:SqliteError) -> {
-                reject(SqliteError2DatabaseError(error, "table"));
-            });
+            if (tableCache.exists(name)) {
+                resolve(new DatabaseResult(this, tableCache.get(name)));
+            } else {
+                _db.get(SQL_TABLE_EXISTS, name).then(response -> {
+                    var table:ITable = new SqliteTable(this);
+                    table.name = name;
+                    table.exists = !(response.data == null);
+
+                    #if !sqlite_no_table_cache
+                    tableCache.set(name, table);
+                    #end
+
+                    resolve(new DatabaseResult(this, table));
+                }, (error:SqliteError) -> {
+                    reject(SqliteError2DatabaseError(error, "table"));
+                });
+            }
         });
     }
 
