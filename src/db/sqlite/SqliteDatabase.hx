@@ -43,6 +43,30 @@ class SqliteDatabase implements IDatabase {
         return _properties.get(name);
     }
 
+    public function create():Promise<DatabaseResult<IDatabase>> {
+        return new Promise((resolve, reject) -> {
+            resolve(new DatabaseResult(this, null, cast this));
+        });
+    }
+
+    public function delete():Promise<DatabaseResult<Bool>> {
+        return new Promise((resolve, reject) -> {
+            if (!FileSystem.exists(_config.filename)) {
+                resolve(new DatabaseResult(this, null, true));
+                return;
+            } else {
+                disconnect().then(_ -> {
+                    FileSystem.deleteFile(_config.filename);
+                    return connect();
+                }).then(_ -> {
+                    resolve(new DatabaseResult(this, null, true));
+                }, (error:SqliteError) -> {
+                    reject(SqliteError2DatabaseError(error, "delete"));
+                });
+            }
+        });
+    }
+
     private var _schema:DatabaseSchema = null;
     public function schema():Promise<DatabaseResult<DatabaseSchema>> {
         return new Promise((resolve, reject) -> {
@@ -89,13 +113,6 @@ class SqliteDatabase implements IDatabase {
             }
             _db = new NativeDatabase(_config.filename, openMode);
             _db.open().then(response -> {
-                /*
-                schema().then(schemaResult -> {
-                    resolve(new DatabaseResult(this, response.data));
-                }, (schemaError:DatabaseError) -> {
-                    reject(schemaError);
-                });
-                */
                 if (_properties.exists("journalMode")) {
                     _db.run("PRAGMA journal_mode=" + _properties.get("journalMode") + ";").then(_ -> {
                         resolve(new DatabaseResult(this, response.data));
@@ -111,8 +128,12 @@ class SqliteDatabase implements IDatabase {
 
     public function disconnect():Promise<DatabaseResult<Bool>> {
         return new Promise((resolve, reject) -> {
-            _db = null;
-            resolve(new DatabaseResult(this, true));
+            _db.close().then(_ -> {
+                _db = null;
+                resolve(new DatabaseResult(this, true));
+            }, (error:SqliteError) -> {
+                reject(SqliteError2DatabaseError(error, "disconnect"));
+            });
         });
     }
 
