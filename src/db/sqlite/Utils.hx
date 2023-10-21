@@ -53,7 +53,7 @@ class Utils {
 
             db.all("SELECT * FROM sqlite_master WHERE type = 'table';").then(results -> {
                 for (r in results.data) {
-                    if (r.table_name == "sqlite_sequence") {
+                    if (r.tbl_name == "sqlite_sequence") {
                         continue;
                     }
                     var table = schema.findTable(r.tbl_name);
@@ -150,15 +150,55 @@ class Utils {
         return sql;
     }
 
-    public static function buildRemoveColumns(tableName:String, columns:Array<ColumnDefinition>, typeMapper:IDataTypeMapper):String {
-        var sql = 'ALTER TABLE ${tableName}\n';
+    public static function buildRemoveColumns(tableName:String, columns:Array<ColumnDefinition>, databaseSchema:DatabaseSchema, typeMapper:IDataTypeMapper):String {
 
+        #if (hl || neko)
+
+        var backupTable = tableName + "_backup";
+        var sql = 'BEGIN TRANSACTION;\n';
+
+        var tableSchema = databaseSchema.findTable(tableName);
+        if (tableSchema == null) {
+            throw "could not find table schema";
+        }
+
+        var columnList = [];
+        for (f in tableSchema.columns) {
+            if (!hasColumn(columns, f.name)) {
+                columnList.push(f.name);
+            }
+        }
+
+        var columnListString = columnList.join(",");
+
+        sql += 'CREATE TEMPORARY TABLE $backupTable($columnListString);\n';
+        sql += 'INSERT INTO $backupTable SELECT $columnListString FROM $tableName;\n';
+        sql += 'DROP TABLE $tableName;\n';
+        sql += 'CREATE TABLE $tableName($columnListString);\n';
+        sql += 'INSERT INTO $tableName SELECT $columnListString FROM $backupTable;\n';
+        sql += 'DROP TABLE $backupTable;\n';
+        sql += 'COMMIT;\n';
+
+        #else
+
+        var sql = 'ALTER TABLE ${tableName}\n';
         for (column in columns) {
             sql += 'DROP COLUMN ${column.name}';
         }
-
         sql += ';';
 
+
+        #end
+
         return sql;
+    }
+
+    private static function hasColumn(columns:Array<ColumnDefinition>, columnName:String) {
+        for (c in columns) {
+            if (c.name == columnName) {
+                return true;
+            }
+        }
+        return false;
     }
 }

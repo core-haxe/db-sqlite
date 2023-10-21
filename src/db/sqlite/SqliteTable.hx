@@ -363,13 +363,39 @@ class SqliteTable implements ITable {
                 return;
             }
 
-            var sql = buildRemoveColumns(this.name, [column], SqliteDataTypeMapper.get());
-            nativeDB.exec(sql).then(result -> {
+            refreshSchema(true).then(schemaResult -> {
+                var sql = buildRemoveColumns(this.name, [column], schemaResult.data, SqliteDataTypeMapper.get());
+
+                // older versions of sqlite cant use drop column, so we'll build a script to handle it, something like:
+                //
+                //     BEGIN TRANSACTION;
+                //     CREATE TEMPORARY TABLE Person_backup(personId,lastName,firstName,iconId);
+                //     INSERT INTO Person_backup SELECT personId,lastName,firstName,iconId FROM Person;
+                //     DROP TABLE Person;
+                //     CREATE TABLE Person(personId,lastName,firstName,iconId);
+                //     INSERT INTO Person SELECT personId,lastName,firstName,iconId FROM Person_backup;
+                //     DROP TABLE Person_backup;
+                //     COMMIT;
+                //
+                // however, we also cant run multiple statements (yay!), so we'll split this string and run it 
+                // line by line
+
+                var promises = [];
+                for (sqlLine in sql.split(";")) {
+                    sqlLine = sqlLine.trim();
+                    if (sqlLine.length == 0) {
+                        continue;
+                    }
+                    promises.push(nativeDB.exec.bind(sqlLine + ";"));
+                }
+
+                return PromiseUtils.runSequentially(promises);
+            }).then(response -> {
                 clearCachedSchema();
                 cast(db, SqliteDatabase).clearCachedSchema();
                 resolve(new DatabaseResult(db, this, true));
             }, (error:SqliteError) -> {
-                reject(SqliteError2DatabaseError(error, "addColumn"));
+                reject(SqliteError2DatabaseError(error, "removeColumn"));
             });
         });
     }
@@ -379,10 +405,10 @@ class SqliteTable implements ITable {
         return @:privateAccess cast(db, SqliteDatabase)._db;
     }
 
-    private function refreshSchema():Promise<DatabaseResult<DatabaseSchema>> { // we'll only refresh the data schema if there are table relationships, since the queries might need them
+    private function refreshSchema(force:Bool = false):Promise<DatabaseResult<DatabaseSchema>> { // we'll only refresh the data schema if there are table relationships, since the queries might need them
         return new Promise((resolve, reject) -> {
             var alwaysAliasResultFields:Bool = this.db.getProperty("alwaysAliasResultFields", false);
-            if (alwaysAliasResultFields == false && db.definedTableRelationships() == null) {
+            if (force == false && alwaysAliasResultFields == false && db.definedTableRelationships() == null) {
                 resolve(new DatabaseResult(db, this, null));
                 return;
             }
