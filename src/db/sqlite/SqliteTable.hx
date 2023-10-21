@@ -326,8 +326,9 @@ class SqliteTable implements ITable {
             }
             
             refreshSchema().then(schemaResult -> {
-                var sql = 'SELECT COUNT(*) from ${this.name}';
-                return nativeDB.get(sql);
+                var values = [];
+                var sql = buildCount(this, query, values);
+                return nativeDB.get(sql, values);
             }).then(response -> {
                 var record = Record.fromDynamic(response.data);
                 resolve(new DatabaseResult(db, this, cast record.values()[0]));
