@@ -5,8 +5,6 @@ import promises.Promise;
 import sqlite.Database as NativeDatabase;
 import sqlite.SqliteError;
 import sqlite.SqliteOpenMode;
-import sys.FileSystem;
-import sys.io.File;
 
 class SqliteDatabase implements IDatabase {
     private var _db:NativeDatabase;
@@ -51,12 +49,12 @@ class SqliteDatabase implements IDatabase {
 
     public function delete():Promise<DatabaseResult<Bool>> {
         return new Promise((resolve, reject) -> {
-            if (!FileSystem.exists(_config.filename)) {
+            if (!sys.FileSystem.exists(_config.filename)) {
                 resolve(new DatabaseResult(this, null, true));
                 return;
             } else {
                 disconnect().then(_ -> {
-                    FileSystem.deleteFile(_config.filename);
+                    sys.FileSystem.deleteFile(_config.filename);
                     return connect();
                 }).then(_ -> {
                     resolve(new DatabaseResult(this, null, true));
@@ -100,8 +98,8 @@ class SqliteDatabase implements IDatabase {
 
     public function connect():Promise<DatabaseResult<Bool>> {
         return new Promise((resolve, reject) -> {
-            if (!FileSystem.exists(_config.filename)) {
-                File.saveContent(_config.filename, "");
+            if (!sys.FileSystem.exists(_config.filename)) {
+                sys.io.File.saveContent(_config.filename, "");
             }
             var openMode:SqliteOpenMode = SqliteOpenMode.ReadWrite;
             if (_config.openMode != null) {
