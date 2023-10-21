@@ -51,10 +51,11 @@ class SqliteDatabase implements IDatabase {
         return new Promise((resolve, reject) -> {
             if (!sys.FileSystem.exists(_config.filename)) {
                 resolve(new DatabaseResult(this, null, true));
-                return;
             } else {
                 disconnect().then(_ -> {
-                    sys.FileSystem.deleteFile(_config.filename);
+                    if (sys.FileSystem.exists(_config.filename)) {
+                        sys.FileSystem.deleteFile(_config.filename);
+                    }
                     return connect();
                 }).then(_ -> {
                     resolve(new DatabaseResult(this, null, true));
