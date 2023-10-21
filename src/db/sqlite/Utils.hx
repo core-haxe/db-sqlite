@@ -29,6 +29,9 @@ class Utils {
 
             db.all(SQL_LIST_TABLES_AND_FIELDS).then(results -> {
                 for (r in results.data) {
+                    if (r.table_name == "sqlite_sequence") {
+                        continue;
+                    }
                     var table = schema.findTable(r.table_name);
                     if (table == null) {
                         table = {
@@ -50,6 +53,9 @@ class Utils {
 
             db.all("SELECT * FROM sqlite_master WHERE type = 'table';").then(results -> {
                 for (r in results.data) {
+                    if (r.table_name == "sqlite_sequence") {
+                        continue;
+                    }
                     var table = schema.findTable(r.tbl_name);
                     if (table == null) {
                         table = {
