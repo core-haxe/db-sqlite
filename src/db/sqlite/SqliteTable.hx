@@ -138,7 +138,7 @@ class SqliteTable implements ITable {
             
             var values = [];
             var insertedId:Int = -1;
-            var sql = buildInsert(this, record, values);
+            var sql = buildInsert(this, record, values, SqliteDataTypeMapper.get());
             var hasSequenceTable = false;
             var schema:DatabaseSchema = null;
             refreshSchema().then(result -> {
@@ -232,7 +232,7 @@ class SqliteTable implements ITable {
                 return;
             }
             var values = [];
-            var sql = buildUpdate(this, query, record, values);
+            var sql = buildUpdate(this, query, record, values, SqliteDataTypeMapper.get());
             nativeDB.get(sql, values).then(response -> {
                 resolve(new DatabaseResult(db, this, record));
             }, (error:SqliteError) -> {

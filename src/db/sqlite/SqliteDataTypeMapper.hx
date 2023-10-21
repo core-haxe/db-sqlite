@@ -14,6 +14,14 @@ class SqliteDataTypeMapper implements IDataTypeMapper {
     public function new() {
     }
 
+    public function shouldConvertValueToDatabase(value:Any):Bool {
+        return false;
+    }
+
+    public function convertValueToDatabase(value:Any):Any {
+        return value;
+    }
+
     public function haxeTypeToDatabaseType(haxeType:ColumnType):String {
         return switch (haxeType) {
             case Number:        'INTEGER';
