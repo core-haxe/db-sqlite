@@ -363,23 +363,23 @@ class SqliteTable implements ITable {
                 return;
             }
 
+            // older versions of sqlite (sys) cant use drop column, so we'll build a script to handle it, something like:
+            //
+            //     BEGIN TRANSACTION;
+            //     CREATE TEMPORARY TABLE Person_backup(personId,lastName,firstName,iconId);
+            //     INSERT INTO Person_backup SELECT personId,lastName,firstName,iconId FROM Person;
+            //     DROP TABLE Person;
+            //     CREATE TABLE Person(personId,lastName,firstName,iconId);
+            //     INSERT INTO Person SELECT personId,lastName,firstName,iconId FROM Person_backup;
+            //     DROP TABLE Person_backup;
+            //     COMMIT;
+            //
+            // however, we also cant run multiple statements (yay!), so we'll split this string and run it 
+            // line by line
+
             refreshSchema(true).then(schemaResult -> {
-                var sql = buildRemoveColumns(this.name, [column], schemaResult.data, SqliteDataTypeMapper.get());
-
-                // older versions of sqlite cant use drop column, so we'll build a script to handle it, something like:
-                //
-                //     BEGIN TRANSACTION;
-                //     CREATE TEMPORARY TABLE Person_backup(personId,lastName,firstName,iconId);
-                //     INSERT INTO Person_backup SELECT personId,lastName,firstName,iconId FROM Person;
-                //     DROP TABLE Person;
-                //     CREATE TABLE Person(personId,lastName,firstName,iconId);
-                //     INSERT INTO Person SELECT personId,lastName,firstName,iconId FROM Person_backup;
-                //     DROP TABLE Person_backup;
-                //     COMMIT;
-                //
-                // however, we also cant run multiple statements (yay!), so we'll split this string and run it 
-                // line by line
-
+                return buildRemoveColumns(nativeDB, this.name, [column], schemaResult.data, SqliteDataTypeMapper.get());
+            }).then(sql -> {                    
                 var promises = [];
                 for (sqlLine in sql.split(";")) {
                     sqlLine = sqlLine.trim();
@@ -388,9 +388,8 @@ class SqliteTable implements ITable {
                     }
                     promises.push(nativeDB.exec.bind(sqlLine + ";"));
                 }
-
                 return PromiseUtils.runSequentially(promises);
-            }).then(response -> {
+            }).then(response -> {                    
                 clearCachedSchema();
                 cast(db, SqliteDatabase).clearCachedSchema();
                 resolve(new DatabaseResult(db, this, true));

@@ -150,47 +150,83 @@ class Utils {
         return sql;
     }
 
-    public static function buildRemoveColumns(tableName:String, columns:Array<ColumnDefinition>, databaseSchema:DatabaseSchema, typeMapper:IDataTypeMapper):String {
+    public static function buildRemoveColumns(db:NativeDatabase, tableName:String, columns:Array<ColumnDefinition>, databaseSchema:DatabaseSchema, typeMapper:IDataTypeMapper):Promise<String> {
+        return new Promise((resolve, reject) -> {
+            #if (hl || neko)
 
-        #if (hl || neko)
+            db.get("SELECT * FROM sqlite_master WHERE type='table' AND name='" + tableName + "';").then(results -> {
+                var sql = null;
+                var originalSql:String = results.data.sql;
+                var newSql = "";
+                var lines = originalSql.split("\n");
+                for (line in lines) {
+                    var temp = line.trim().replace("`", "");
+                    var use = true;
+    
+                    for (c in columns) {
+                        if (temp.startsWith(c.name)) {
+                            use = false;
+                            break;
+                        }
+                    }
+    
+                    if (use) {
+                        newSql += line + "\n";
+                    }
+                }
+                newSql = newSql.trim();
+                if (newSql.endsWith(",")) {
+                    newSql = newSql.substring(0, newSql.length - 1);
+                }
+                if (!newSql.endsWith(")")) {
+                    newSql += ")";
+                }
+                if (!newSql.endsWith(";")) {
+                    newSql += ";";
+                }
+    
+                var backupTable = tableName + "_backup";
+                sql = 'BEGIN TRANSACTION;\n';
+        
+                var tableSchema = databaseSchema.findTable(tableName);
+                if (tableSchema == null) {
+                    throw "could not find table schema";
+                }
+        
+                var columnList = [];
+                for (f in tableSchema.columns) {
+                    if (!hasColumn(columns, f.name)) {
+                        columnList.push(f.name);
+                    }
+                }
 
-        var backupTable = tableName + "_backup";
-        var sql = 'BEGIN TRANSACTION;\n';
-
-        var tableSchema = databaseSchema.findTable(tableName);
-        if (tableSchema == null) {
-            throw "could not find table schema";
-        }
-
-        var columnList = [];
-        for (f in tableSchema.columns) {
-            if (!hasColumn(columns, f.name)) {
-                columnList.push(f.name);
+                var columnListString = columnList.join(",");
+        
+                sql += 'CREATE TEMPORARY TABLE $backupTable($columnListString);\n';
+                sql += 'INSERT INTO $backupTable SELECT $columnListString FROM $tableName;\n';
+                sql += 'DROP TABLE $tableName;\n';
+                //sql += 'CREATE TABLE $tableName($columnListString);\n';
+                sql += newSql + "\n";
+                sql += 'INSERT INTO $tableName SELECT $columnListString FROM $backupTable;\n';
+                sql += 'DROP TABLE $backupTable;\n';
+                sql += 'COMMIT;\n';
+        
+                resolve(sql);
+            }, (error:SqliteError) -> {
+                trace("error", error.message);
+            });
+    
+            #else
+    
+            var sql = 'ALTER TABLE ${tableName}\n';
+            for (column in columns) {
+                sql += 'DROP COLUMN ${column.name}';
             }
-        }
-
-        var columnListString = columnList.join(",");
-
-        sql += 'CREATE TEMPORARY TABLE $backupTable($columnListString);\n';
-        sql += 'INSERT INTO $backupTable SELECT $columnListString FROM $tableName;\n';
-        sql += 'DROP TABLE $tableName;\n';
-        sql += 'CREATE TABLE $tableName($columnListString);\n';
-        sql += 'INSERT INTO $tableName SELECT $columnListString FROM $backupTable;\n';
-        sql += 'DROP TABLE $backupTable;\n';
-        sql += 'COMMIT;\n';
-
-        #else
-
-        var sql = 'ALTER TABLE ${tableName}\n';
-        for (column in columns) {
-            sql += 'DROP COLUMN ${column.name}';
-        }
-        sql += ';';
-
-
-        #end
-
-        return sql;
+            sql += ';';
+            resolve(sql);
+    
+            #end
+        });
     }
 
     private static function hasColumn(columns:Array<ColumnDefinition>, columnName:String) {
