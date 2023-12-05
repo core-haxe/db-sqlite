@@ -70,7 +70,7 @@ class SqliteDatabase implements IDatabase {
     public function schema():Promise<DatabaseResult<DatabaseSchema>> {
         return new Promise((resolve, reject) -> {
             if (_schema == null) {
-                Utils.loadFullDatabaseSchema(_db).then(schema -> {
+                Utils.loadFullDatabaseSchema(_db, SqliteDataTypeMapper.get()).then(schema -> {
                     _schema = schema;
                     resolve(new DatabaseResult(this, _schema));
                 }, (error:SqliteError) -> {

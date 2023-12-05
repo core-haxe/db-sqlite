@@ -1,5 +1,7 @@
 package db.sqlite;
 
+using StringTools;
+
 class SqliteDataTypeMapper implements IDataTypeMapper {
     private static var _instance:IDataTypeMapper = null;
     public static function get():IDataTypeMapper {
@@ -32,5 +34,26 @@ class SqliteDataTypeMapper implements IDataTypeMapper {
             case Binary:        'BLOB';
             case Unknown:       'TEXT';
         }
+    }
+
+    public function databaseTypeToHaxeType(databaseType:String):ColumnType {
+        databaseType = databaseType.toUpperCase();
+        if (databaseType == "INTEGER") {
+            return Number;
+        }
+        if (databaseType == "DECIMAL") {
+            return Decimal;
+        }
+        if (databaseType.startsWith("VARCHAR")) {
+            var count = databaseType.replace("VARCHAR", "").replace("(", "").replace(" ", "");
+            return Text(Std.parseInt(count));
+        }
+        if (databaseType == "TEXT") {
+            return Memo;
+        }
+        if (databaseType == "BLOB") {
+            return Binary;
+        }
+        return Memo;
     }
 }

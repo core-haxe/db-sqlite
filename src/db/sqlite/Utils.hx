@@ -21,13 +21,19 @@ class Utils {
         return dbError;
     }
 
-    public static function loadFullDatabaseSchema(db:NativeDatabase):Promise<DatabaseSchema> {
+    public static function loadFullDatabaseSchema(db:NativeDatabase, typeMapper:IDataTypeMapper):Promise<DatabaseSchema> {
         return new Promise((resolve, reject) -> {
             var schema:DatabaseSchema = {};
             
-            #if !sys
+            #if (cpp || !sys)
 
-            db.all(SQL_LIST_TABLES_AND_FIELDS).then(results -> {
+            var tablesWithAutoIncrement:Array<String> = [];
+            db.all("SELECT * FROM SQLITE_SEQUENCE").then(results -> {
+                for (r in results.data) {
+                    tablesWithAutoIncrement.push(r.name);
+                }
+                return db.all(SQL_LIST_TABLES_AND_FIELDS);
+            }).then(results -> {
                 for (r in results.data) {
                     if (r.table_name == "sqlite_sequence") {
                         continue;
@@ -39,9 +45,22 @@ class Utils {
                         };
                         schema.tables.push(table);
                     }
+
+                    var options = [];
+                    if (r.pk == 1) {
+                        options.push(ColumnOptions.PrimaryKey);
+                        if (tablesWithAutoIncrement.contains(table.name)) {
+                            options.push(ColumnOptions.AutoIncrement);
+                        }
+                    }
+                    if (r.notnull == 1) {
+                        options.push(ColumnOptions.NotNull);
+                    }
+                    var sqliteType = r.type;
                     table.columns.push({
                         name: r.name,
-                        type: null
+                        type: typeMapper.databaseTypeToHaxeType(sqliteType),
+                        options: options
                     });
                 }
                 resolve(schema);
@@ -51,7 +70,13 @@ class Utils {
 
             #else // good old sys db cant use "SQL_LIST_TABLES_AND_FIELDS" because "reasons" so we'll manually parse the reasults of "SELECT * FROM sqlite_master"
 
-            db.all("SELECT * FROM sqlite_master WHERE type = 'table';").then(results -> {
+            var tablesWithAutoIncrement:Array<String> = [];
+            db.all("SELECT * FROM SQLITE_SEQUENCE").then(results -> {
+                for (r in results.data) {
+                    tablesWithAutoIncrement.push(r.name);
+                }
+                return db.all("SELECT * FROM sqlite_master WHERE type = 'table';");
+            }).then(results -> {
                 for (r in results.data) {
                     if (r.tbl_name == "sqlite_sequence") {
                         continue;
@@ -72,21 +97,39 @@ class Utils {
                         var fieldList = fieldListString.split(",");
                         for (f in fieldList) {
                             f = StringTools.trim(f);
+                            f = f.replace("PRIMARY KEY", "PRIMARYKEY");
+                            f = f.replace("NOT NULL", "NOTNULL");
                             var parts = f.split(" ");
+
                             var fieldName = StringTools.trim(parts[0]);
                             if (fieldName.length == 0) {
                                 continue;
                             }
-                            var fieldName = parts[0];
+                            var fieldName = parts.shift();
                             fieldName = fieldName.replace("`", "");
+
+                            var fieldType = parts.shift();
+
+                            var options = [];
+                            if (parts.contains("PRIMARYKEY")) {
+                                options.push(ColumnOptions.PrimaryKey);
+                                if (tablesWithAutoIncrement.contains(table.name)) {
+                                    options.push(ColumnOptions.AutoIncrement);
+                                }
+                            }
+                            if (parts.contains("NOTNULL")) {
+                                options.push(ColumnOptions.NotNull);
+                            }
+
                             table.columns.push({
                                 name: fieldName,
-                                type: null
+                                type: typeMapper.databaseTypeToHaxeType(fieldType),
+                                options: options
                             });
                         }
                     }
                 }
-                
+
                 resolve(schema);
             }, (error:SqliteError) -> {
                 reject(error);
