@@ -284,7 +284,11 @@ class SqliteTable implements ITable {
                 var sql = buildSelect(this, query, 1, null, values, relationshipDefinintions, schemaResult.data);
                 return nativeDB.all(sql, values);
             }).then(response -> {
-                resolve(new DatabaseResult(db, this, Record.fromDynamic(response.data[0])));
+                var record:Record = null;
+                if (response.data != null && response.data.length > 0) {
+                    record = Record.fromDynamic(response.data[0]);
+                }
+                resolve(new DatabaseResult(db, this, record));
             }, (error:SqliteError) -> {
                 reject(SqliteError2DatabaseError(error, "findOne"));
             });
