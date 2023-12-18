@@ -29,8 +29,8 @@ class SqliteDatabase implements IDatabase {
         if (name == "complexRelationships") {
             if (_relationshipDefs == null) {
                 _relationshipDefs = new RelationshipDefinitions();
-                _relationshipDefs.complexRelationships = value;
             }
+            _relationshipDefs.complexRelationships = value;
         }
         _properties.set(name, value);
     }
