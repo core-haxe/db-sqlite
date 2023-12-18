@@ -133,6 +133,8 @@ class SqliteDatabase implements IDatabase {
         return new Promise((resolve, reject) -> {
             _db.close().then(_ -> {
                 _db = null;
+                tableCache = [];
+                clearCachedSchema();
                 resolve(new DatabaseResult(this, true));
             }, (error:SqliteError) -> {
                 reject(SqliteError2DatabaseError(error, "disconnect"));
