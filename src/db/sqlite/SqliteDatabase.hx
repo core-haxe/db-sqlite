@@ -97,6 +97,10 @@ class SqliteDatabase implements IDatabase {
         return _relationshipDefs;
     }
 
+    public function clearTableRelationships() {
+        _relationshipDefs = null;
+    }
+
     public function connect():Promise<DatabaseResult<Bool>> {
         return new Promise((resolve, reject) -> {
             if (!sys.FileSystem.exists(_config.filename)) {
