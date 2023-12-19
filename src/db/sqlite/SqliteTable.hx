@@ -77,7 +77,7 @@ class SqliteTable implements ITable {
     }
 
 
-    public function all():Promise<DatabaseResult<Array<Record>>> {
+    public function all():Promise<DatabaseResult<RecordSet>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
                 reject(new DatabaseError('table "${name}" does not exist', 'all'));
@@ -89,7 +89,7 @@ class SqliteTable implements ITable {
                 var sql = buildSelect(this, null, null, null, values, db.definedTableRelationships(), schemaResult.data);
                 return nativeDB.all(sql, values);
             }).then(response -> {
-                var records = [];
+                var records:RecordSet = [];
                 for (item in response.data) {
                     records.push(Record.fromDynamic(item));
                 }
@@ -100,7 +100,7 @@ class SqliteTable implements ITable {
         });
     }
 
-    public function page(pageIndex:Int, pageSize:Int = 100, query:QueryExpr = null, allowRelationships:Bool = true):Promise<DatabaseResult<Array<Record>>> {
+    public function page(pageIndex:Int, pageSize:Int = 100, query:QueryExpr = null, allowRelationships:Bool = true):Promise<DatabaseResult<RecordSet>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
                 reject(new DatabaseError('table "${name}" does not exist', 'all'));
@@ -117,7 +117,7 @@ class SqliteTable implements ITable {
                 var sql = buildSelect(this, null, pageSize, pageIndex * pageSize, values, relationshipDefinintions, schemaResult.data);
                 return nativeDB.all(sql, values);
             }).then(response -> {
-                var records = [];
+                var records:RecordSet = [];
                 for (item in response.data) {
                     records.push(Record.fromDynamic(item));
                 }
@@ -173,7 +173,7 @@ class SqliteTable implements ITable {
         });
     }
 
-    public function addAll(records:Array<Record>):Promise<DatabaseResult<Array<Record>>> {
+    public function addAll(records:RecordSet):Promise<DatabaseResult<RecordSet>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
                 reject(new DatabaseError('table "${name}" does not exist', 'addAll'));
@@ -241,7 +241,7 @@ class SqliteTable implements ITable {
         });
     }
 
-    public function find(query:QueryExpr, allowRelationships:Bool = true):Promise<DatabaseResult<Array<Record>>> {
+    public function find(query:QueryExpr, allowRelationships:Bool = true):Promise<DatabaseResult<RecordSet>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
                 reject(new DatabaseError('table "${name}" does not exist', 'find'));
@@ -257,7 +257,7 @@ class SqliteTable implements ITable {
                 var sql = buildSelect(this, query, null, null, values, relationshipDefinintions, schemaResult.data);
                 return nativeDB.all(sql, values);
             }).then(response -> {
-                var records = [];
+                var records:RecordSet = [];
                 for (item in response.data) {
                     records.push(Record.fromDynamic(item));
                 }
@@ -295,7 +295,7 @@ class SqliteTable implements ITable {
         });
     }
 
-    public function findUnique(columnName:String, query:QueryExpr = null, allowRelationships:Bool = true):Promise<DatabaseResult<Array<Record>>> {
+    public function findUnique(columnName:String, query:QueryExpr = null, allowRelationships:Bool = true):Promise<DatabaseResult<RecordSet>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
                 reject(new DatabaseError('table "${name}" does not exist', 'find'));
@@ -311,7 +311,7 @@ class SqliteTable implements ITable {
                 var sql = buildDistinctSelect(this, query, columnName, null, null, values, relationshipDefinintions, schemaResult.data);
                 return nativeDB.all(sql, values);
             }).then(response -> {
-                var records = [];
+                var records:RecordSet = [];
                 for (item in response.data) {
                     records.push(Record.fromDynamic(item));
                 }
