@@ -128,7 +128,7 @@ class SqliteTable implements ITable {
         });
     }
 
-    private var retryCount = 0;
+    private var retryCountAdd = 0;
     public function add(record:Record):Promise<DatabaseResult<Record>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
@@ -145,6 +145,7 @@ class SqliteTable implements ITable {
                 schema = result.data;
                 return nativeDB.run(sql, values);
             }).then(result -> {
+                retryCountAdd = 0;
                 if (result != null && result.data != null) {
                     insertedId = result.data.lastID;
                     record.field("_insertedId", insertedId);
@@ -153,16 +154,17 @@ class SqliteTable implements ITable {
                     resolve(new DatabaseResult(db, this, record));
                 }
             }, (error:SqliteError) -> {
-                if (error.message.contains("SQLITE_BUSY")) { // bit of a sneaky way to avoid busy errors, if you them consitently, you are using sqlite for the wrong thing! 
-                    retryCount++;
-                    if (retryCount < 5) {
+                if (error.message.contains("SQLITE_BUSY")) { // bit of a sneaky way to avoid busy errors, if you them consistently, you are using sqlite for the wrong thing! 
+                    retryCountAdd++;
+                    trace("SQLITE_BUSY in SqliteTable::add, attempting to retry operation (" + retryCountAdd + ")");
+                    if (retryCountAdd < 5) {
                         haxe.Timer.delay(() -> {
                             add(record).then(result -> {
                                 resolve(result);
                             }, error -> {
                                 reject(error);
                             });
-                        }, 20);
+                        }, 50);
                     } else {
                         reject(SqliteError2DatabaseError(error, "add"));
                     }
@@ -193,6 +195,7 @@ class SqliteTable implements ITable {
         });
     }
 
+    private var retryCountDelete:Int = 0;
     public function delete(record:Record):Promise<DatabaseResult<Record>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
@@ -202,13 +205,31 @@ class SqliteTable implements ITable {
             var values = [];
             var sql = buildDeleteRecord(this, record, values);
             nativeDB.get(sql, values).then(response -> {
+                retryCountDelete = 0;
                 resolve(new DatabaseResult(db, this, record));
             }, (error:SqliteError) -> {
-                reject(SqliteError2DatabaseError(error, "delete"));
+                if (error.message.contains("SQLITE_BUSY")) { // bit of a sneaky way to avoid busy errors, if you them consistently, you are using sqlite for the wrong thing! 
+                    retryCountDelete++;
+                    trace("SQLITE_BUSY in SqliteTable::delete, attempting to retry operation (" + retryCountDelete + ")");
+                    if (retryCountDelete < 5) {
+                        haxe.Timer.delay(() -> {
+                            delete(record).then(result -> {
+                                resolve(result);
+                            }, error -> {
+                                reject(error);
+                            });
+                        }, 50);
+                    } else {
+                        reject(SqliteError2DatabaseError(error, "delete"));
+                    }
+                } else {
+                    reject(SqliteError2DatabaseError(error, "delete"));
+                }
             });
         });
     }
 
+    private var retryCountDeleteAll:Int = 0;
     public function deleteAll(query:QueryExpr = null):Promise<DatabaseResult<Bool>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
@@ -218,13 +239,31 @@ class SqliteTable implements ITable {
             nativeDB.exec(buildDeleteWhere(this, query)).then(response -> {
                 return nativeDB.exec("VACUUM;");
             }).then(response -> {
+                retryCountDeleteAll = 0;
                 resolve(new DatabaseResult(db, this, true));
             }, (error:SqliteError) -> {
-                reject(SqliteError2DatabaseError(error, "deleteAll"));
+                if (error.message.contains("SQLITE_BUSY")) { // bit of a sneaky way to avoid busy errors, if you them consistently, you are using sqlite for the wrong thing! 
+                    retryCountDeleteAll++;
+                    trace("SQLITE_BUSY in SqliteTable::deleteAll, attempting to retry operation (" + retryCountDeleteAll + ")");
+                    if (retryCountDeleteAll < 5) {
+                        haxe.Timer.delay(() -> {
+                            deleteAll(query).then(result -> {
+                                resolve(result);
+                            }, error -> {
+                                reject(error);
+                            });
+                        }, 50);
+                    } else {
+                        reject(SqliteError2DatabaseError(error, "deleteAll"));
+                    }
+                } else {
+                    reject(SqliteError2DatabaseError(error, "deleteAll"));
+                }
             });
         });
     }
 
+    private var retryCountUpdate:Int = 0;
     public function update(query:QueryExpr, record:Record):Promise<DatabaseResult<Record>> {
         return new Promise((resolve, reject) -> {
             if (!exists) {
@@ -234,9 +273,26 @@ class SqliteTable implements ITable {
             var values = [];
             var sql = buildUpdate(this, query, record, values, SqliteDataTypeMapper.get());
             nativeDB.get(sql, values).then(response -> {
+                retryCountUpdate = 0;
                 resolve(new DatabaseResult(db, this, record));
             }, (error:SqliteError) -> {
-                reject(SqliteError2DatabaseError(error, "update"));
+                if (error.message.contains("SQLITE_BUSY")) { // bit of a sneaky way to avoid busy errors, if you them consistently, you are using sqlite for the wrong thing! 
+                    retryCountUpdate++;
+                    trace("SQLITE_BUSY in SqliteTable::update, attempting to retry operation (" + retryCountUpdate + ")");
+                    if (retryCountUpdate < 5) {
+                        haxe.Timer.delay(() -> {
+                            update(query, record).then(result -> {
+                                resolve(result);
+                            }, error -> {
+                                reject(error);
+                            });
+                        }, 50);
+                    } else {
+                        reject(SqliteError2DatabaseError(error, "update"));
+                    }
+                } else {
+                    reject(SqliteError2DatabaseError(error, "update"));
+                }
             });
         });
     }
