@@ -459,6 +459,26 @@ class SqliteTable implements ITable {
         });
     }
 
+    #if allow_raw
+    public function raw(data:String, values:Array<Any> = null):Promise<DatabaseResult<RecordSet>> {
+        return new Promise((resolve, reject) -> {
+            if (values == null) {
+                values = [];
+            }
+            var sql = data;
+            nativeDB.all(sql, values).then(response -> {
+                var records:RecordSet = [];
+                for (item in response.data) {
+                    records.push(Record.fromDynamic(item));
+                }
+                resolve(new DatabaseResult(db, this, records));
+            }, (error:SqliteError) -> {
+                reject(SqliteError2DatabaseError(error, "raw"));
+            });
+        });
+    }
+    #end
+
     private var nativeDB(get, null):NativeDatabase;
     private function get_nativeDB():NativeDatabase {
         return @:privateAccess cast(db, SqliteDatabase)._db;
