@@ -139,9 +139,8 @@ class SqliteTable implements ITable {
             var values = [];
             var insertedId:Int = -1;
             var sql = buildInsert(this, record, values, SqliteDataTypeMapper.get());
-            var hasSequenceTable = false;
             var schema:DatabaseSchema = null;
-            refreshSchema().then(result -> {
+            refreshSchema(true).then(result -> {
                 schema = result.data;
                 return nativeDB.run(sql, values);
             }).then(result -> {
@@ -149,6 +148,15 @@ class SqliteTable implements ITable {
                 if (result != null && result.data != null) {
                     insertedId = result.data.lastID;
                     record.field("_insertedId", insertedId);
+
+                    var tableSchema = schema.findTable(this.name);
+                    if (tableSchema != null) {
+                        var primaryKeyColumns = tableSchema.findPrimaryKeyColumns();
+                        if (primaryKeyColumns.length == 1) { // we'll only "auto set" the primary key column if there is _only_ one of them
+                            record.field(primaryKeyColumns[0].name, insertedId);
+                        }
+                    }
+
                     resolve(new DatabaseResult(db, this, record));
                 } else {
                     resolve(new DatabaseResult(db, this, record));
