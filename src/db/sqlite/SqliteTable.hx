@@ -22,14 +22,17 @@ class SqliteTable implements ITable {
     }
 
     private var _tableSchema:TableSchema = null;
-    public function schema():Promise<DatabaseResult<TableSchema>> {
+    public function schema(force:Bool = false):Promise<DatabaseResult<TableSchema>> {
         return new Promise((resolve, reject) -> {
+            if (force) {
+                clearCachedSchema();
+            }
             if (_tableSchema != null) {
                 resolve(new DatabaseResult(db, this, _tableSchema));
                 return;
             }
 
-            this.db.schema().then(result -> {
+            this.db.schema(force).then(result -> {
                 _tableSchema = result.data.findTable(this.name);
                 resolve(new DatabaseResult(db, this, _tableSchema));
             }, (error:DatabaseError) -> {
