@@ -67,8 +67,11 @@ class SqliteDatabase implements IDatabase {
     }
 
     private var _schema:DatabaseSchema = null;
-    public function schema():Promise<DatabaseResult<DatabaseSchema>> {
+    public function schema(force:Bool = false):Promise<DatabaseResult<DatabaseSchema>> {
         return new Promise((resolve, reject) -> {
+            if (force) {
+                clearCachedSchema();
+            }
             if (_schema == null) {
                 Utils.loadFullDatabaseSchema(_db, SqliteDataTypeMapper.get()).then(schema -> {
                     _schema = schema;
