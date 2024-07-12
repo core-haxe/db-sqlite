@@ -160,9 +160,9 @@ class SqliteTable implements ITable {
                         }
                     }
 
-                    resolve(new DatabaseResult(db, this, record));
+                    resolve(new DatabaseResult(db, this, record, result.changes));
                 } else {
-                    resolve(new DatabaseResult(db, this, record));
+                    resolve(new DatabaseResult(db, this, record, result.changes));
                 }
             }, (error:SqliteError) -> {
                 if (error.message.contains("SQLITE_BUSY")) { // bit of a sneaky way to avoid busy errors, if you them consistently, you are using sqlite for the wrong thing! 
@@ -199,7 +199,11 @@ class SqliteTable implements ITable {
             }
 
             PromiseUtils.runSequentially(promises).then(results -> {
-                resolve(new DatabaseResult(db, this, records));
+                var itemsAffected = 0;
+                for (result in results) {
+                    itemsAffected += result.itemsAffected;
+                }
+                resolve(new DatabaseResult(db, this, records, itemsAffected));
             }, (error:SqliteError) -> {
                 reject(SqliteError2DatabaseError(error, "addAll"));
             });
@@ -215,9 +219,9 @@ class SqliteTable implements ITable {
             }
             var values = [];
             var sql = buildDeleteRecord(this, record, values);
-            nativeDB.get(sql, values).then(response -> {
+            nativeDB.run(sql, values).then(response -> {
                 retryCountDelete = 0;
-                resolve(new DatabaseResult(db, this, record));
+                resolve(new DatabaseResult(db, this, record, response.changes));
             }, (error:SqliteError) -> {
                 if (error.message.contains("SQLITE_BUSY")) { // bit of a sneaky way to avoid busy errors, if you them consistently, you are using sqlite for the wrong thing! 
                     retryCountDelete++;
@@ -247,11 +251,13 @@ class SqliteTable implements ITable {
                 reject(new DatabaseError('table "${name}" does not exist', 'deleteAll'));
                 return;
             }
-            nativeDB.exec(buildDeleteWhere(this, query)).then(response -> {
+            var itemsAffected:Null<Int> = null;
+            nativeDB.run(buildDeleteWhere(this, query)).then(response -> {
+                itemsAffected = response.changes;
                 return nativeDB.exec("VACUUM;");
             }).then(response -> {
                 retryCountDeleteAll = 0;
-                resolve(new DatabaseResult(db, this, true));
+                resolve(new DatabaseResult(db, this, true, itemsAffected));
             }, (error:SqliteError) -> {
                 if (error.message.contains("SQLITE_BUSY")) { // bit of a sneaky way to avoid busy errors, if you them consistently, you are using sqlite for the wrong thing! 
                     retryCountDeleteAll++;
@@ -283,9 +289,9 @@ class SqliteTable implements ITable {
             }
             var values = [];
             var sql = buildUpdate(this, query, record, values, SqliteDataTypeMapper.get());
-            nativeDB.get(sql, values).then(response -> {
+            nativeDB.run(sql, values).then(result -> {
                 retryCountUpdate = 0;
-                resolve(new DatabaseResult(db, this, record));
+                resolve(new DatabaseResult(db, this, record, result.changes));
             }, (error:SqliteError) -> {
                 if (error.message.contains("SQLITE_BUSY")) { // bit of a sneaky way to avoid busy errors, if you them consistently, you are using sqlite for the wrong thing! 
                     retryCountUpdate++;
