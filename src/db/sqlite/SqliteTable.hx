@@ -50,7 +50,8 @@ class SqliteTable implements ITable {
             
             var schemaChanged:Bool = false;
 
-            schema().then(result -> {
+            // we always want to force refresh the schema, so we are working with the latest, not a cached copy
+            schema(true).then(result -> {
                 var promises = [];
                 var currentSchema = result.data;
                 if (currentSchema != null && !currentSchema.equals(newSchema)) {
