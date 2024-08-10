@@ -118,7 +118,7 @@ class SqliteTable implements ITable {
                 }
 
                 var values = [];
-                var sql = buildSelect(this, null, pageSize, pageIndex * pageSize, values, relationshipDefinintions, schemaResult.data);
+                var sql = buildSelect(this, query, pageSize, pageIndex * pageSize, values, relationshipDefinintions, schemaResult.data);
                 return nativeDB.all(sql, values);
             }).then(response -> {
                 var records:RecordSet = [];
