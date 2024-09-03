@@ -185,7 +185,7 @@ class Utils {
 
         for (column in columns) {
             var type = typeMapper.haxeTypeToDatabaseType(column.type);
-            sql += 'ADD ${column.name} ${type}';
+            sql += 'ADD `${column.name}` ${type}';
         }
 
         sql += ';';
@@ -263,7 +263,7 @@ class Utils {
     
             var sql = 'ALTER TABLE ${tableName}\n';
             for (column in columns) {
-                sql += 'DROP COLUMN ${column.name}';
+                sql += 'DROP COLUMN `${column.name}`';
             }
             sql += ';';
             resolve(sql);
