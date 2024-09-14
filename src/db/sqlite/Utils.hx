@@ -185,7 +185,7 @@ class Utils {
 
         for (column in columns) {
             var type = typeMapper.haxeTypeToDatabaseType(column.type);
-            sql += 'ADD ${column.name} ${type}';
+            sql += 'ADD `${column.name}` ${type}';
         }
 
         sql += ';';
