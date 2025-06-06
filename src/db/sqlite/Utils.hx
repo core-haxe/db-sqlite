@@ -140,7 +140,7 @@ class Utils {
     }
 
     public static function buildCreateTable(tableName:String, columns:Array<ColumnDefinition>, typeMapper:IDataTypeMapper) {
-        var sql = 'CREATE TABLE ${tableName} (\n';
+        var sql = 'CREATE TABLE `${tableName}` (\n';
 
         var columnParts = [];
         var unique:Array<String> = null;
