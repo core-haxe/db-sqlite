@@ -80,6 +80,16 @@ class SqliteTable implements ITable {
         });
     }
 
+    public function createIndex(fields:Array<String>, unique:Bool = false, name:String = null):Promise<DatabaseResult<ITable>> {
+        return new Promise((resolve, reject) -> {
+            var sql = buildCreateIndex(this, fields, unique, name);
+            nativeDB.exec(sql).then(result -> {
+                resolve(new DatabaseResult(db, this));
+            }, (error:DatabaseError) -> {
+                reject(error);
+            });
+        });
+    }
 
     public function all():Promise<DatabaseResult<RecordSet>> {
         return new Promise((resolve, reject) -> {
